@@ -12,15 +12,19 @@ Route::get('/user', function (Request $request) {
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
-Route::middleware('auth:sanctum')->prefix('users')->group(function () {
-    Route::post('/', [UserController::class, 'create']);
-    Route::get('/{id}', [UserController::class, 'get']);
-    Route::put('/{id}', [UserController::class, 'update']);
-    Route::delete('/{id}', [UserController::class, 'delete']);
-});
+Route::prefix('users')->group(function () {
+    Route::middleware('auth')->group(function () {
+         Route::get('/', [UserController::class, 'index']);
+         Route::put('/', [UserController::class, 'update']);
+         Route::delete('/', [UserController::class, 'destroy']);
+     });
+     Route::post('/', [UserController::class, 'create']);
+ });
 
 Route::post('/tokens/create', function (Request $request) {
     $token = $request->user()->createToken($request->token_name);
  
     return ['token' => $token->plainTextToken];
 });
+
+Route::get('/me', [UserController::class, 'me']);

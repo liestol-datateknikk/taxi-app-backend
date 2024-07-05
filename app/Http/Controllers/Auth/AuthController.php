@@ -4,42 +4,71 @@ namespace App\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Controllers\Controller;
-use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Auth\TokenController;
 
 class AuthController extends Controller
 {
 
-    protected $tokenController;
-
-    public function __construct(TokenController $tokenController)
+    public function login()
     {
-        $this->tokenController = $tokenController;
-    }
+        $credentials = request(['email', 'password']);
 
-   public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        if (! $token = auth()->attempt($credentials)) {
+            return response()->json(['message' => 'Feil e-post eller passord'], 403);
+        }
+        $user = auth()->user();
 
-        if (Auth::attempt($request->only('email', 'password'))) {
-            $user = Auth::user();
-            $token = $this->tokenController->create($request);
-            return response()->json(['token' => $token], 200);
+        if (!$user) {
+            return response()->json(['message' => 'Feil e-post eller passord'], 404);
         }
 
-        throw ValidationException::withMessages([
-            'email' => ['The provided credentials are incorrect.'],
-        ]);
+        return $this->respondWithToken($token, $user);
     }
 
-    public function logout(Request $request)
+    /**
+     * Get the authenticated User.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function me()
     {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json(['message' => 'Logged out successfully'], 200);
+        # Here we just get information about current user
+        return response()->json(auth()->user());
     }
+
+    public function logout()
+    {
+        auth()->logout(); # This is just logout function that will destroy access token of current user
+
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+    public function refresh()
+    {
+        # When access token will be expired, we are going to generate a new one wit this function 
+        # and return it here in response
+        $user = auth()->user();
+
+        return $this->respondWithToken(Auth::refresh(), $user);
+    }
+    
+    /**
+     * Get the token array structure.
+     *
+     * @param  string $token
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    protected function respondWithToken($token, $user)
+{
+    return response()->json([
+        'token' => [
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => null,
+        ],
+        'user' => $user,
+    ]);
+}
 }
