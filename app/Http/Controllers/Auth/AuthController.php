@@ -39,9 +39,10 @@ class AuthController extends Controller
 
     public function logout()
     {
-        auth()->logout(); # This is just logout function that will destroy access token of current user
+        JWTAuth::getToken(); // Ensures token is already loaded.
+        JWTAuth::invalidate(true);
 
-        return response()->json(['message' => 'Successfully logged out']);
+        return response()->json(['message' => 'Successfully logged out'], 204);
     }
 
     public function refresh()
